@@ -3,6 +3,7 @@
   "extends": ["config:recommended"],
   "dependencyDashboard": false,
   "rebaseWhen": "behind-base-branch",
+  "prHourlyLimit": 0,
   "customManagers": [
     {
       "customType": "regex",
