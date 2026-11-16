@@ -11,7 +11,9 @@ permissions:
 
 # Pinned service images — single source of truth for both integration jobs.
 env:
+  # renovate: datasource=docker depName=ghcr.io/letsencrypt/pebble
   PEBBLE_IMAGE: ghcr.io/letsencrypt/pebble:2.10.1
+  # renovate: datasource=docker depName=openbao/openbao
   OPENBAO_IMAGE: openbao/openbao:2.6.0
 
 jobs:
@@ -23,6 +25,7 @@ jobs:
       versions: ${{ steps.set.outputs.versions }}
     steps:
       - id: set
+        # renovate: datasource=github-tags depName=coredns/coredns
         run: echo 'versions=["v1.14.7"]' >> "$GITHUB_OUTPUT"
 
   unit:

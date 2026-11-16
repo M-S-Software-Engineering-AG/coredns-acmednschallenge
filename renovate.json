@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "dependencyDashboard": false,
+  "rebaseWhen": "behind-base-branch",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Go modules in deps.ini, each under a `; renovate: datasource=… packageName=…` comment",
+      "managerFilePatterns": ["/^deps\\.ini$/"],
+      "matchStrings": [
+        ";\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+packageName=(?<packageName>\\S+)(?:[ \\t]+extractVersion=(?<extractVersion>\\S+))?[ \\t]*\\n(?<depName>[^\\s=]+)[ \\t]*=[ \\t]*(?<currentValue>\\S+)"
+      ]
+    },
+    {
+      "customType": "regex",
+      "description": "CI versions pinned on the line below a `# renovate: datasource=… depName=…` comment",
+      "managerFilePatterns": ["/^\\.github/workflows/ci\\.yml$/"],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\n[^\\n]*?[=:\"](?<currentValue>v?\\d[^\\s\"']*)"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Major Go module bump: move the plugin's import paths to the new /vN (the build check in setup-coredns.sh fails if they don't match)",
+      "matchFileNames": ["deps.ini"],
+      "matchUpdateTypes": ["major"],
+      "postUpgradeTasks": {
+        "commands": [
+          "find . -name '*.go' -exec sed -i -E 's#{{{depName}}}(/v[0-9]+)?([/\"])#{{{depName}}}/v{{{newMajor}}}\\2#g' {} +"
+        ],
+        "fileFilters": ["**/*.go"],
+        "executionMode": "update"
+      }
+    }
+  ]
+}

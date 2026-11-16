@@ -269,7 +269,9 @@ issuance fails. Then rebuild with `go generate && go build`, or `make`.
 1. Clone CoreDNS from [GitHub](https://github.com/coredns/coredns).
 2. Clone this repository into `plugin/acmednschallenge`.
 3. Add `acmednschallenge` to `plugin.cfg`, above `file` and `forward` (see [Building](#building)).
-4. Run `go generate` and `go build`.
+4. Run `go generate` and `go build`. CoreDNS doesn't pin lego or the OpenBao API, so use the
+   versions pinned in `deps.ini` (kept current by Renovate), e.g.
+   `go get github.com/go-acme/lego/v4@<LEGO_VERSION>`.
 5. Create a Corefile under `_development_stuff/coredns_configs/Corefile`:
 
     ~~~ txt
