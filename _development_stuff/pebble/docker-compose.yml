@@ -1,7 +1,7 @@
 services:
   pebble:
     # Pinned; override with PEBBLE_IMAGE=... in the environment or a .env file.
-    image: ${PEBBLE_IMAGE:-ghcr.io/letsencrypt/pebble:2.10.1}
+    image: ${PEBBLE_IMAGE:-ghcr.io/letsencrypt/pebble:2.10.3}
     # -dnsserver points Pebble's validation authority at your local CoreDNS
     # (this plugin) so it really resolves the _acme-challenge TXT record. Runs on
     # 5354, not 53, to sidestep the mDNS/Bonjour listener that owns 5353 on macOS.

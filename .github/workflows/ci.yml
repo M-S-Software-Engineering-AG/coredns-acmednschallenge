@@ -12,7 +12,7 @@ permissions:
 # Pinned service images — single source of truth for both integration jobs.
 env:
   # renovate: datasource=docker depName=ghcr.io/letsencrypt/pebble
-  PEBBLE_IMAGE: ghcr.io/letsencrypt/pebble:2.10.1
+  PEBBLE_IMAGE: ghcr.io/letsencrypt/pebble:2.10.3
   # renovate: datasource=docker depName=openbao/openbao
   OPENBAO_IMAGE: openbao/openbao:2.6.0
 
