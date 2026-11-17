@@ -144,3 +144,13 @@ jobs:
         run: |
           docker logs pebble || true
           docker logs openbao || true
+
+  # The only required check in the ruleset. Add new jobs to `needs`; jobs skipped via `if:` don't fail it.
+  ci-ok:
+    if: always()
+    needs: [matrix, unit, integration-disk, integration-reload, integration-vault]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if a required job failed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
