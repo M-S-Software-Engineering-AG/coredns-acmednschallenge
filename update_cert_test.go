@@ -14,8 +14,9 @@ import (
 
 type fakeStorage struct{ saves int }
 
-func (f *fakeStorage) Save(*certificate.Resource) error  { f.saves++; return nil }
-func (f *fakeStorage) Load(string) *certificate.Resource { return nil }
+func (f *fakeStorage) Save(*certificate.Resource) error   { f.saves++; return nil }
+func (f *fakeStorage) Load(string) *certificate.Resource  { return nil }
+func (f *fakeStorage) UpgradeLegacy(string) (bool, error) { return false, nil }
 
 func TestUpdateCertForDomainRetry(t *testing.T) {
 	tests := []struct {
@@ -47,7 +48,7 @@ func TestUpdateCertForDomainRetry(t *testing.T) {
 				if attempts <= tc.failCount {
 					return false, nil, errors.New("boom")
 				}
-				return tc.isNew, &certificate.Resource{Domain: domain}, nil
+				return tc.isNew, &certificate.Resource{ID: domain}, nil
 			}
 
 			ac.updateCertForDomain("example.com")

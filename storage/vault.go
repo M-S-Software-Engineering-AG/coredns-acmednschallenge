@@ -94,10 +94,10 @@ func (v *VaultCerts) Save(certs *certificate.Resource) error {
 	defer cancel()
 
 	_, err = v.client.Logical().WriteWithContext(ctx,
-		kvPath(v.mount, v.prefix, sanitizedDomain(certs.Domain)),
+		kvPath(v.mount, v.prefix, sanitizedDomain(certs.ID)),
 		map[string]interface{}{"data": data})
 	if err != nil {
-		return fmt.Errorf("unable to save certificate for domain %s to vault: %w", certs.Domain, err)
+		return fmt.Errorf("unable to save certificate for domain %s to vault: %w", certs.ID, err)
 	}
 	return nil
 }
@@ -115,6 +115,10 @@ func (v *VaultCerts) Load(domain string) *certificate.Resource {
 		return nil
 	}
 	return vaultDataToCert(data)
+}
+
+func (v *VaultCerts) UpgradeLegacy(domain string) (bool, error) {
+	return upgradeByRoundTrip(v, domain)
 }
 
 type VaultAccount struct {
@@ -166,7 +170,7 @@ func (v *VaultAccount) LoadAccountKey(email string) []byte {
 func certToVaultData(certs *certificate.Resource) (map[string]interface{}, error) {
 	meta, err := json.Marshal(certs)
 	if err != nil {
-		return nil, fmt.Errorf("unable to marshal CertResource for domain %s: %w", certs.Domain, err)
+		return nil, fmt.Errorf("unable to marshal CertResource for domain %s: %w", certs.ID, err)
 	}
 	return map[string]interface{}{
 		"tls.crt":   string(certs.Certificate),

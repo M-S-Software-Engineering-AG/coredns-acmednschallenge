@@ -78,24 +78,54 @@ func dirMode(m fs.FileMode) fs.FileMode {
 }
 
 func (d *Disk) Save(certs *certificate.Resource) error {
-	if err := d.writeFile(certs.Domain, ".key", certs.PrivateKey); err != nil {
+	if err := d.writeFile(certs.ID, ".key", certs.PrivateKey); err != nil {
 		return fmt.Errorf("unable to save key file: %w", err)
 	}
 
-	if err := d.writeFile(certs.Domain, ".pem", bytes.Join([][]byte{certs.Certificate, certs.PrivateKey}, nil)); err != nil {
+	if err := d.saveJSON(certs); err != nil {
+		return err
+	}
+
+	// Written last: a new .pem is what consumers (and CI) watch for, so it must mean the save is complete.
+	if err := d.writeFile(certs.ID, ".pem", bytes.Join([][]byte{certs.Certificate, certs.PrivateKey}, nil)); err != nil {
 		return fmt.Errorf("unable to save PEM file: %w", err)
 	}
 
+	return nil
+}
+
+func (d *Disk) saveJSON(certs *certificate.Resource) error {
 	jsonBytes, err := json.MarshalIndent(certs, "", "\t")
 	if err != nil {
-		return fmt.Errorf("unable to marshal CertResource for domain %s: %w", certs.Domain, err)
+		return fmt.Errorf("unable to marshal CertResource for domain %s: %w", certs.ID, err)
 	}
 
-	if err := d.writeFile(certs.Domain, ".json", jsonBytes); err != nil {
-		return fmt.Errorf("unable to save CertResource for domain %s: %w", certs.Domain, err)
+	if err := d.writeFile(certs.ID, ".json", jsonBytes); err != nil {
+		return fmt.Errorf("unable to save CertResource for domain %s: %w", certs.ID, err)
 	}
-
 	return nil
+}
+
+// UpgradeLegacy rewrites only the .json: Load keeps just the leaf cert and no key, so a Load+Save
+// round trip would wipe the .key and the chain.
+func (d *Disk) UpgradeLegacy(domain string) (bool, error) {
+	raw, err := d.readFile(domain, ".json")
+	if errors.Is(err, fs.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+
+	var certs certificate.Resource
+	if err := json.Unmarshal(raw, &certs); err != nil {
+		return false, fmt.Errorf("unable to parse CertResource for domain %s: %w", domain, err)
+	}
+	if certs.ID != "" {
+		return false, nil
+	}
+	certs.ID = domain
+	return true, d.saveJSON(&certs)
 }
 
 func (d *Disk) Load(domain string) *certificate.Resource {

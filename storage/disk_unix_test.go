@@ -20,7 +20,7 @@ func TestDiskChgrp(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	in := &certificate.Resource{Domain: "example.com", PrivateKey: []byte("k")}
+	in := &certificate.Resource{ID: "example.com", PrivateKey: []byte("k")}
 	if err := s.Save(in); err != nil {
 		t.Fatalf("Save: %v", err)
 	}

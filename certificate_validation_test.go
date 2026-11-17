@@ -52,7 +52,7 @@ func TestCheckIfCertIsValid(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			certs := &certificate.Resource{Domain: "example.com", Certificate: tc.cert}
+			certs := &certificate.Resource{ID: "example.com", Certificate: tc.cert}
 			if got := checkIfCertIsValid(ac, certs); got != tc.want {
 				t.Errorf("checkIfCertIsValid = %v, want %v", got, tc.want)
 			}

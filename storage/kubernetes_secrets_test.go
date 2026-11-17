@@ -14,7 +14,7 @@ func TestSecretsRoundTrip(t *testing.T) {
 	s := newSecrets(fake.NewClientset(), "certs-ns")
 
 	in := &certificate.Resource{
-		Domain:      "example.com",
+		ID:          "example.com",
 		CertURL:     "https://acme/cert/1",
 		Certificate: []byte("CERT"),
 		PrivateKey:  []byte("KEY"),
@@ -32,7 +32,7 @@ func TestSecretsRoundTrip(t *testing.T) {
 	if out == nil {
 		t.Fatal("Load returned nil after Save")
 	}
-	if out.Domain != "example.com" || out.CertURL != "https://acme/cert/1" {
+	if out.ID != "example.com" || out.CertURL != "https://acme/cert/1" {
 		t.Errorf("metadata not restored: %+v", out)
 	}
 	if string(out.Certificate) != "CERT2" || string(out.PrivateKey) != "KEY" {
@@ -47,7 +47,7 @@ func TestSecretsRoundTrip(t *testing.T) {
 func TestSecretsTypeAndName(t *testing.T) {
 	client := fake.NewClientset()
 	s := newSecrets(client, "ns")
-	if err := s.Save(&certificate.Resource{Domain: "*.example.com", Certificate: []byte("c"), PrivateKey: []byte("k")}); err != nil {
+	if err := s.Save(&certificate.Resource{ID: "*.example.com", Certificate: []byte("c"), PrivateKey: []byte("k")}); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 
@@ -86,5 +86,41 @@ func TestSecretsAccountRoundTrip(t *testing.T) {
 	}
 	if sec.Type != corev1.SecretTypeOpaque {
 		t.Errorf("secret type = %q, want %q", sec.Type, corev1.SecretTypeOpaque)
+	}
+}
+
+func TestSecretsUpgradeLegacy(t *testing.T) {
+	client := fake.NewClientset()
+	s := newSecrets(client, "ns")
+
+	// What plugin 2.3.x (lego v4) left in the secret.
+	_, err := client.CoreV1().Secrets("ns").Create(context.Background(), &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "example.org", Namespace: "ns"},
+		Type:       corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       []byte("CERT"),
+			corev1.TLSPrivateKeyKey: []byte("KEY"),
+			acmeResourceKey:         []byte(`{"domain":"example.org","certUrl":"https://acme/cert/1"}`),
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	upgraded, err := s.UpgradeLegacy("example.org")
+	if err != nil || !upgraded {
+		t.Fatalf("UpgradeLegacy = %v, %v, want true, nil", upgraded, err)
+	}
+
+	out := s.Load("example.org")
+	if out == nil || out.ID != "example.org" || out.CertURL != "https://acme/cert/1" {
+		t.Fatalf("Load after upgrade = %+v, want ID example.org and the stored certUrl", out)
+	}
+	if string(out.Certificate) != "CERT" || string(out.PrivateKey) != "KEY" {
+		t.Errorf("tls material changed: cert=%q key=%q", out.Certificate, out.PrivateKey)
+	}
+
+	if upgraded, err := s.UpgradeLegacy("example.org"); err != nil || upgraded {
+		t.Errorf("second UpgradeLegacy = %v, %v, want false, nil", upgraded, err)
 	}
 }

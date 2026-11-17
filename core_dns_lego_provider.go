@@ -1,7 +1,9 @@
 package acmednschallenge
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/coredns/coredns/plugin/acmednschallenge/config"
@@ -28,8 +30,7 @@ type coreDnsLegoProvider struct {
 }
 
 func newCoreDnsLegoProvider(acc *config.ACMEChallengeConfig, account storage.AccountStorage, challenges *challengeStore, loggerName string) (*coreDnsLegoProvider, error) {
-	acmeLogger := clog.NewWithPlugin(loggerName)
-	acmeLog.Logger = &logger{logger: acmeLogger}
+	acmeLog.SetDefault(slog.New(&slogHandler{logger: clog.NewWithPlugin(loggerName)}))
 
 	user := &AcmeUser{Email: acc.Email}
 	if keyPEM := account.LoadAccountKey(acc.Email); keyPEM != nil {
@@ -58,8 +59,8 @@ func newCoreDnsLegoProvider(acc *config.ACMEChallengeConfig, account storage.Acc
 	return provider, nil
 }
 
-func (p *coreDnsLegoProvider) Present(domain, _, keyAuth string) error {
-	info := dns01.GetChallengeInfo(domain, keyAuth)
+func (p *coreDnsLegoProvider) Present(ctx context.Context, domain, _, keyAuth string) error {
+	info := dns01.GetChallengeInfo(ctx, domain, keyAuth)
 	fdqn := dns.Fqdn(info.EffectiveFQDN)
 	p.activeChallenges.add(fdqn, info.Value)
 
@@ -67,8 +68,8 @@ func (p *coreDnsLegoProvider) Present(domain, _, keyAuth string) error {
 	return nil
 }
 
-func (p *coreDnsLegoProvider) CleanUp(domain, _, keyAuth string) error {
-	info := dns01.GetChallengeInfo(domain, keyAuth)
+func (p *coreDnsLegoProvider) CleanUp(ctx context.Context, domain, _, keyAuth string) error {
+	info := dns01.GetChallengeInfo(ctx, domain, keyAuth)
 	fdqn := dns.Fqdn(info.EffectiveFQDN)
 	p.activeChallenges.remove(fdqn)
 	log.Infof("removed TXT '%s' record for domain '%s'", info.Value, fdqn)

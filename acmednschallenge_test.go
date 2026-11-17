@@ -1,12 +1,18 @@
 package acmednschallenge
 
 import (
+	"bytes"
 	"context"
+	golog "log"
+	"log/slog"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/acmednschallenge/config"
 	"github.com/coredns/coredns/plugin/pkg/dnstest"
+	clog "github.com/coredns/coredns/plugin/pkg/log"
 	"github.com/coredns/coredns/plugin/test"
 	"github.com/miekg/dns"
 )
@@ -102,10 +108,10 @@ func TestPresentCleanUp(t *testing.T) {
 	store := newChallengeStore()
 	p := &coreDnsLegoProvider{activeChallenges: store}
 
-	if err := p.Present("example.com", "", "keyauth-one"); err != nil {
+	if err := p.Present(context.Background(), "example.com", "", "keyauth-one"); err != nil {
 		t.Fatalf("Present: %v", err)
 	}
-	if err := p.Present("example.com", "", "keyauth-two"); err != nil {
+	if err := p.Present(context.Background(), "example.com", "", "keyauth-two"); err != nil {
 		t.Fatalf("Present: %v", err)
 	}
 
@@ -119,7 +125,7 @@ func TestPresentCleanUp(t *testing.T) {
 		}
 	}
 
-	if err := p.CleanUp("example.com", "", "keyauth-one"); err != nil {
+	if err := p.CleanUp(context.Background(), "example.com", "", "keyauth-one"); err != nil {
 		t.Fatalf("CleanUp: %v", err)
 	}
 	if !store.isEmpty() {
@@ -127,20 +133,16 @@ func TestPresentCleanUp(t *testing.T) {
 	}
 }
 
-func TestStripLogPrefix(t *testing.T) {
-	tests := []struct {
-		in, want string
-	}{
-		{"[INFO] hello", "hello"},
-		{"[WARN] a b c", "a b c"},
-		{"no prefix", "no prefix"},
-		{"[unterminated", "[unterminated"},
-		{"[]", "[]"},
-		{"", ""},
-	}
-	for _, tc := range tests {
-		if got := stripLogPrefix(tc.in); got != tc.want {
-			t.Errorf("stripLogPrefix(%q) = %q, want %q", tc.in, got, tc.want)
-		}
+func TestSlogHandler(t *testing.T) {
+	var buf bytes.Buffer
+	golog.SetOutput(&buf)
+	defer golog.SetOutput(os.Stderr)
+
+	l := slog.New(&slogHandler{logger: clog.NewWithPlugin("test")}).With("domain", "example.org")
+	l.Warn("renewing", "attempt", 2)
+
+	want := "[WARNING] plugin/test: renewing domain=example.org attempt=2"
+	if got := buf.String(); !strings.Contains(got, want) {
+		t.Errorf("logged %q, want it to contain %q", got, want)
 	}
 }

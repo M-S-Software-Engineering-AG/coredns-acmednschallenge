@@ -1,6 +1,7 @@
 package acmednschallenge
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 
@@ -20,9 +21,13 @@ func (p *coreDnsLegoProvider) renewCertificate(certs *certificate.Resource) (*ce
 	renewOptions := &certificate.RenewOptions{
 		Bundle:     true,
 		MustStaple: false,
+		// Certs written by lego v4 have no stored key type, and disk storage loads no private key,
+		// so renew would have nothing to generate a new key from.
+		KeyType:          certcrypto.RSA2048,
+		EnableCommonName: true,
 	}
 
-	renewedCerts, err := client.Certificate.RenewWithOptions(*certs, renewOptions)
+	renewedCerts, err := client.Certificate.Renew(context.Background(), *certs, renewOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -45,11 +50,13 @@ func (p *coreDnsLegoProvider) obtainNewCertificate(mainDomain string) (*certific
 	domains = append(domains, additionalSans...)
 
 	r := certificate.ObtainRequest{
-		Domains: domains,
-		Bundle:  len(domains) > 1,
+		Domains:          domains,
+		Bundle:           len(domains) > 1,
+		KeyType:          certcrypto.RSA2048,
+		EnableCommonName: true,
 	}
 
-	certificates, err := client.Certificate.Obtain(r)
+	certificates, err := client.Certificate.Obtain(context.Background(), r)
 	if err != nil {
 		return nil, err
 	}
@@ -62,9 +69,9 @@ func (p *coreDnsLegoProvider) getAcmeClient() (*lego.Client, error) {
 	if p.customCAD != "" {
 		config.CADirURL = p.customCAD
 	} else {
-		config.CADirURL = lego.LEDirectoryProduction
+		config.CADirURL = lego.DirectoryURLLetsEncrypt
 		if p.useLetsEncryptTestServer {
-			config.CADirURL = lego.LEDirectoryStaging
+			config.CADirURL = lego.DirectoryURLLetsEncryptStaging
 		}
 	}
 
@@ -72,19 +79,20 @@ func (p *coreDnsLegoProvider) getAcmeClient() (*lego.Client, error) {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: p.allowInsecureCAD},
 	}
 
-	config.Certificate.KeyType = certcrypto.RSA2048
-
 	client, err := lego.NewClient(config)
 	if err != nil {
 		return nil, err
 	}
 
-	dnsTimeout := dns01.AddDNSTimeout(p.dnsTimeout)
+	// lego v5 keeps the DNS client package-global. Set it per client, like v4's options did, so
+	// the block that is issuing uses its own nameservers and timeout.
+	dnsOpts := dns01.NewOptions()
+	dnsOpts.Timeout = p.dnsTimeout
+	dnsOpts.RecursiveNameservers = p.customNameservers
+	dns01.SetDefaultClient(dns01.NewClient(dnsOpts))
 
 	err = client.Challenge.SetDNS01Provider(p,
-		dnsTimeout,
-		dns01.CondOption(p.skipDnsPropagationTest, dns01.DisableAuthoritativeNssPropagationRequirement()),
-		dns01.CondOption(len(p.customNameservers) > 0, dns01.AddRecursiveNameservers(p.customNameservers)),
+		dns01.CondOptions(p.skipDnsPropagationTest, dns01.DisableAuthoritativeNssPropagationRequirement()),
 	)
 
 	if err != nil {
@@ -92,13 +100,13 @@ func (p *coreDnsLegoProvider) getAcmeClient() (*lego.Client, error) {
 	}
 
 	if p.acmeUser.alreadyExists {
-		reg, err := client.Registration.ResolveAccountByKey()
+		reg, err := client.Registration.ResolveAccountByKey(context.Background())
 		if err != nil {
 			return nil, err
 		}
 		p.acmeUser.Registration = reg
 	} else {
-		reg, err := client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: p.acceptedLetsEncryptToS})
+		reg, err := client.Registration.Register(context.Background(), registration.RegisterOptions{TermsOfServiceAgreed: p.acceptedLetsEncryptToS})
 		if err != nil {
 			return nil, err
 		}

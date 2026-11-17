@@ -8,7 +8,7 @@ import (
 
 func TestVaultCertDataRoundTrip(t *testing.T) {
 	in := &certificate.Resource{
-		Domain:      "example.com",
+		ID:          "example.com",
 		CertURL:     "https://acme/cert/1",
 		Certificate: []byte("CERTPEM"),
 		PrivateKey:  []byte("KEYPEM"),
@@ -26,7 +26,7 @@ func TestVaultCertDataRoundTrip(t *testing.T) {
 	if out == nil {
 		t.Fatal("vaultDataToCert returned nil")
 	}
-	if out.Domain != "example.com" || out.CertURL != "https://acme/cert/1" {
+	if out.ID != "example.com" || out.CertURL != "https://acme/cert/1" {
 		t.Errorf("metadata not restored: %+v", out)
 	}
 	if string(out.Certificate) != "CERTPEM" || string(out.PrivateKey) != "KEYPEM" {

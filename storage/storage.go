@@ -10,6 +10,19 @@ import (
 type CertStorage interface {
 	Save(certs *certificate.Resource) error
 	Load(domain string) *certificate.Resource
+	// UpgradeLegacy rewrites a cert stored by lego v4 ("domain" instead of "id") in the v5 format.
+	// It reports whether anything was rewritten.
+	UpgradeLegacy(domain string) (bool, error)
+}
+
+// upgradeByRoundTrip is UpgradeLegacy for backends whose Load returns everything Save writes.
+func upgradeByRoundTrip(s CertStorage, domain string) (bool, error) {
+	certs := s.Load(domain)
+	if certs == nil || certs.ID != "" {
+		return false, nil
+	}
+	certs.ID = domain
+	return true, s.Save(certs)
 }
 
 type Options struct {

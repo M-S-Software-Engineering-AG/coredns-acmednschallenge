@@ -148,10 +148,65 @@ jobs:
           docker logs pebble || true
           docker logs openbao || true
 
+  # ponytail: tests the 2.3 -> 2.4 upgrade (lego v4 -> v5 storage); delete this job when 2.3 LTS ends.
+  integration-upgrade:
+    name: integration test upgrade (coredns ${{ matrix.coredns }})
+    runs-on: ubuntu-latest
+    needs: matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        coredns: ${{ fromJSON(needs.matrix.outputs.versions) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-coredns
+        with:
+          coredns-version: ${{ matrix.coredns }}
+      - name: Build CoreDNS
+        run: go build -o "$RUNNER_TEMP/coredns-bin" .
+        working-directory: ${{ runner.temp }}/coredns
+      - name: Build CoreDNS with the latest 2.3 release
+        env:
+          COREDNS_VERSION: ${{ matrix.coredns }}
+        run: |
+          from="$(git tag -l 'v2.3.*' --sort=-v:refname | head -1)"
+          echo "upgrading from $from"
+          # Outside the workspace, so this branch's setup-coredns.sh rsync doesn't pick it up.
+          mkdir "$RUNNER_TEMP/plugin-v4"
+          git archive "$from" | tar -x -C "$RUNNER_TEMP/plugin-v4"
+          git clone --depth 1 -b "$COREDNS_VERSION" https://github.com/coredns/coredns.git "$RUNNER_TEMP/coredns-v4"
+          "$RUNNER_TEMP/plugin-v4/.github/ci/setup-coredns.sh" "$RUNNER_TEMP/coredns-v4"
+          cd "$RUNNER_TEMP/coredns-v4" && go build -o "$RUNNER_TEMP/coredns-v4-bin" .
+      - name: Start Pebble (real DNS-01 validation against CoreDNS)
+        run: |
+          docker run -d --name pebble --network host \
+            -e PEBBLE_VA_NOSLEEP=1 \
+            "$PEBBLE_IMAGE" \
+            -config test/config/pebble-config.json -strict -dnsserver 127.0.0.1:5354
+          for i in $(seq 1 30); do
+            curl -sk https://127.0.0.1:14000/dir >/dev/null && break
+            sleep 1
+          done
+      # Also fails if phase 2 registered a new account instead of reusing the 2.3 account key.
+      - name: Issue with 2.3, renew with this branch (disk storage)
+        env:
+          UPGRADE_BIN: ${{ runner.temp }}/coredns-bin
+        run: .github/ci/assert-renewed.sh "$RUNNER_TEMP/coredns-v4-bin" .github/ci/corefiles/Corefile.disk /tmp/coredns-certs/certs/example.org.pem
+      - name: Storage is rewritten in the new format
+        run: |
+          jq -e '.id == "example.org"' /tmp/coredns-certs/certs/example.org.json
+          # A lost ID would have written files with an empty name.
+          if ls -A /tmp/coredns-certs/certs | grep -E '^\.(json|pem|key)$'; then exit 1; fi
+      - name: Pebble logs on failure
+        if: failure()
+        run: docker logs pebble || true
+
   # The only required check in the ruleset. Add new jobs to `needs`; jobs skipped via `if:` don't fail it.
   ci-ok:
     if: always()
-    needs: [matrix, unit, integration-disk, integration-reload, integration-vault]
+    needs: [matrix, unit, integration-disk, integration-reload, integration-vault, integration-upgrade]
     runs-on: ubuntu-latest
     steps:
       - name: Fail if a required job failed

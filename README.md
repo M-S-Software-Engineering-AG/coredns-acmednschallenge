@@ -84,8 +84,8 @@ acmednschallenge {
   domain is retried on the next `certValidationInterval` tick.
 * `dnsTTL` **TTL** **optional**, TTL of the challenge TXT record, an integer in `[60, 600]`. Default
   `120`.
-* `dnsTimeout` **DURATION** **optional**, timeout for the DNS propagation check, a Go duration. Default
-  `60s`.
+* `dnsTimeout` **DURATION** **optional**, timeout for each DNS query lego makes while checking that the
+  challenge record has propagated, a Go duration. Default `60s`.
 * `skipDnsPropagationTest` **optional**, skip lego's DNS propagation pre-check. Takes no argument.
 * `useLetsEncryptTestServer` **optional**, use the Let's Encrypt staging server. Takes no argument.
 * `customCAD` **URL** **optional**, ACME CA directory URL to use instead of Let's Encrypt.
@@ -271,7 +271,7 @@ issuance fails. Then rebuild with `go generate && go build`, or `make`.
 3. Add `acmednschallenge` to `plugin.cfg`, above `file` and `forward` (see [Building](#building)).
 4. Run `go generate` and `go build`. CoreDNS doesn't pin lego or the OpenBao API, so use the
    versions pinned in `deps.ini` (kept current by Renovate), e.g.
-   `go get github.com/go-acme/lego/v4@<LEGO_VERSION>`.
+   `go get github.com/go-acme/lego/v5@<LEGO_VERSION>`.
 5. Create a Corefile under `_development_stuff/coredns_configs/Corefile`:
 
     ~~~ txt

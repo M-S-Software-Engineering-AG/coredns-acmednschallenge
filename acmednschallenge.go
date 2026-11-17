@@ -122,6 +122,7 @@ func (ac *acmeChallenge) start(ctx context.Context) {
 
 	log.Info("started certificate service")
 
+	ac.upgradeStoredCerts()
 	ac.checkAndUpdateCertForAllDomains(ctx)
 
 	uptimeTicker := time.NewTicker(ac.config.CertValidationInterval)
@@ -134,6 +135,19 @@ func (ac *acmeChallenge) start(ctx context.Context) {
 			return
 		case <-uptimeTicker.C:
 			ac.checkAndUpdateCertForAllDomains(ctx)
+		}
+	}
+}
+
+// upgradeStoredCerts rewrites certs stored by plugin 2.3.x (lego v4) in the lego v5 format, so every
+// later Load gets their ID.
+func (ac *acmeChallenge) upgradeStoredCerts() {
+	for domain := range ac.config.ManagedDomains {
+		upgraded, err := ac.storage.UpgradeLegacy(domain)
+		if err != nil {
+			log.Errorf("could not upgrade stored certificate for domain '%s': %v", domain, err)
+		} else if upgraded {
+			log.Infof("upgraded stored certificate for domain '%s' to the lego v5 format", domain)
 		}
 	}
 }

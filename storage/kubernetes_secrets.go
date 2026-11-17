@@ -58,15 +58,15 @@ func restConfig() (*rest.Config, error) {
 func (s *Secrets) Save(certs *certificate.Resource) error {
 	meta, err := json.Marshal(certs)
 	if err != nil {
-		return fmt.Errorf("unable to marshal CertResource for domain %s: %w", certs.Domain, err)
+		return fmt.Errorf("unable to marshal CertResource for domain %s: %w", certs.ID, err)
 	}
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        secretName(certs.Domain),
+			Name:        secretName(certs.ID),
 			Namespace:   s.namespace,
 			Labels:      map[string]string{managedByLabel: managedByValue},
-			Annotations: map[string]string{"acmednschallenge/domain": certs.Domain},
+			Annotations: map[string]string{"acmednschallenge/domain": certs.ID},
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
@@ -85,7 +85,7 @@ func (s *Secrets) Save(certs *certificate.Resource) error {
 		_, err = api.Create(ctx, secret, metav1.CreateOptions{})
 	}
 	if err != nil {
-		return fmt.Errorf("unable to save secret for domain %s: %w", certs.Domain, err)
+		return fmt.Errorf("unable to save secret for domain %s: %w", certs.ID, err)
 	}
 	return nil
 }
@@ -112,6 +112,10 @@ func (s *Secrets) Load(domain string) *certificate.Resource {
 	resource.Certificate = secret.Data[corev1.TLSCertKey]
 	resource.PrivateKey = secret.Data[corev1.TLSPrivateKeyKey]
 	return &resource
+}
+
+func (s *Secrets) UpgradeLegacy(domain string) (bool, error) {
+	return upgradeByRoundTrip(s, domain)
 }
 
 func secretName(domain string) string {
