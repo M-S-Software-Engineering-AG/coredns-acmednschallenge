@@ -3,7 +3,7 @@ package storage
 import (
 	"testing"
 
-	"github.com/go-acme/lego/v4/certificate"
+	"github.com/go-acme/lego/v5/certificate"
 )
 
 func TestVaultCertDataRoundTrip(t *testing.T) {

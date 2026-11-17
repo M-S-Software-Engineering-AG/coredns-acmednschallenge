@@ -5,7 +5,7 @@ import (
 	"encoding/pem"
 	"time"
 
-	"github.com/go-acme/lego/v4/certificate"
+	"github.com/go-acme/lego/v5/certificate"
 )
 
 func checkIfCertIsValid(ac *acmeChallenge, certs *certificate.Resource) bool {

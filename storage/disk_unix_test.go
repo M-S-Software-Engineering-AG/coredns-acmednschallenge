@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/go-acme/lego/v4/certificate"
+	"github.com/go-acme/lego/v5/certificate"
 )
 
 func TestDiskChgrp(t *testing.T) {

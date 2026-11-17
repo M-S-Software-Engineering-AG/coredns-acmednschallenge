@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/coredns/coredns/plugin/acmednschallenge/config"
-	"github.com/go-acme/lego/v4/certificate"
+	"github.com/go-acme/lego/v5/certificate"
 )
 
 type fakeStorage struct{ saves int }

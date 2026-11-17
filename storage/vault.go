@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/go-acme/lego/v4/certificate"
+	"github.com/go-acme/lego/v5/certificate"
 	bao "github.com/openbao/openbao/api/v2"
 )
 

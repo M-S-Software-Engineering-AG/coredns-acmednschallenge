@@ -3,7 +3,7 @@ package acmednschallenge
 import (
 	"crypto"
 
-	"github.com/go-acme/lego/v4/registration"
+	"github.com/go-acme/lego/v5/registration"
 )
 
 type AcmeUser struct {
