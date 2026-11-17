@@ -26,6 +26,11 @@
   ],
   "packageRules": [
     {
+      "description": "CoreDNS still has 2016 tags v001…v011; strict semver ignores them (the default coerces v011 to 11.0.0)",
+      "matchPackageNames": ["coredns/coredns"],
+      "versioning": "semver"
+    },
+    {
       "description": "Major Go module bump: move the plugin's import paths to the new /vN (the build check in setup-coredns.sh fails if they don't match)",
       "matchFileNames": ["deps.ini"],
       "matchUpdateTypes": ["major"],
