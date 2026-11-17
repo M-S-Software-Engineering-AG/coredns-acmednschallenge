@@ -7,9 +7,9 @@ import (
 	"github.com/coredns/coredns/plugin/acmednschallenge/config"
 	"github.com/coredns/coredns/plugin/acmednschallenge/storage"
 	clog "github.com/coredns/coredns/plugin/pkg/log"
-	"github.com/go-acme/lego/v4/certcrypto"
-	"github.com/go-acme/lego/v4/challenge/dns01"
-	acmeLog "github.com/go-acme/lego/v4/log"
+	"github.com/go-acme/lego/v5/certcrypto"
+	"github.com/go-acme/lego/v5/challenge/dns01"
+	acmeLog "github.com/go-acme/lego/v5/log"
 	"github.com/miekg/dns"
 )
 

@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	clog "github.com/coredns/coredns/plugin/pkg/log"
-	"github.com/go-acme/lego/v4/certificate"
+	"github.com/go-acme/lego/v5/certificate"
 	"golang.org/x/net/idna"
 )
 
