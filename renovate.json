@@ -2,6 +2,8 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "dependencyDashboard": false,
+  "automerge": true,
+  "platformAutomerge": false,
   "rebaseWhen": "behind-base-branch",
   "prHourlyLimit": 0,
   "customManagers": [
