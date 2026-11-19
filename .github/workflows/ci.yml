@@ -14,7 +14,7 @@ env:
   # renovate: datasource=docker depName=ghcr.io/letsencrypt/pebble
   PEBBLE_IMAGE: ghcr.io/letsencrypt/pebble:2.10.3
   # renovate: datasource=docker depName=openbao/openbao
-  OPENBAO_IMAGE: openbao/openbao:2.7.2
+  OPENBAO_IMAGE: openbao/openbao:2.7.3
 
 jobs:
   # Single source of truth for the CoreDNS version matrix. Edit the list here;
